@@ -1,0 +1,63 @@
+version: '3.8'
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: StrongPassword123!
+      MYSQL_DATABASE: blog_db
+      MYSQL_USER: blog_user
+      MYSQL_PASSWORD: UserPassword123!
+    networks:
+      - backend-net
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_app
+    environment:
+      PMA_HOST: db
+      PMA_ABSOLUTE_URI: https://localhost/phpmyadmin/
+    networks:
+      - backend-net
+      - frontend-net
+    restart: always
+
+  blog_app:
+    image: ghost:5-alpine
+    container_name: blog_app
+    environment:
+      database__client: mysql
+      database__connection__host: db
+      database__connection__user: blog_user
+      database__connection__password: UserPassword123!
+      database__connection__database: blog_db
+      url: https://localhost
+    networks:
+      - backend-net
+      - frontend-net
+    depends_on:
+      - db
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - frontend-net
+    depends_on:
+      - blog_app
+    restart: always
